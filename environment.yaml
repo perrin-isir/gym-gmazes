@@ -1,0 +1,11 @@
+name:
+channels:
+- defaults
+- conda-forge
+dependencies:
+- python>=3.9
+- pip>=21.3.1
+- conda>=4.11.0
+- pip:
+    - gym>=0.22.0
+    - torch>=1.10.1

@@ -2,6 +2,8 @@ import os
 import gym
 from gym.envs.registration import register
 
+__version__ = "0.1.0"
+
 
 def envpath():
     resdir = os.path.join(os.path.dirname(__file__))
