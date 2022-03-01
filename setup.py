@@ -11,7 +11,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "gym>=0.22.0",
-        "torch>=1.10.1",
+        "torch>=1.10.0",
     ],
     license="LICENSE",
 )
