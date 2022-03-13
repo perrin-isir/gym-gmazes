@@ -78,7 +78,10 @@ class GMazeCommon:
         self.num_steps = 0
         high = np.tile(1.0 * np.ones(self._action_dim), (self.num_envs, 1))
         low = -high
-        self.action_space = spaces.Box(low=low, high=high, dtype=np.float64)
+        self.single_action_space = spaces.Box(low=low, high=high, dtype=np.float64)
+        self.action_space = gym.vector.utils.batch_space(
+            self.single_action_space,
+            self.num_envs)
 
     @staticmethod
     def reset_done():
@@ -129,7 +132,10 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
 
         high = np.tile(1.0 * np.ones(self._obs_dim), (self.num_envs, 1))
         low = -high
-        self.observation_space = spaces.Box(low, high, dtype=np.float64)
+        self.single_observation_space = spaces.Box(low, high, dtype=np.float64)
+        self.observation_space = gym.vector.utils.batch_space(
+            self.single_observation_space,
+            self.num_envs)
 
     def step(self, action: torch.Tensor):
         # add action to the state frame_skip times,
@@ -223,7 +229,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
             1.0 * np.ones(self._desired_goal_dim), (self.num_envs, 1)
         )
         low_desired_goal = -high_desired_goal
-        self.observation_space = spaces.Dict(
+        self.single_observation_space = spaces.Dict(
             dict(
                 observation=spaces.Box(low, high, dtype=np.float64),
                 achieved_goal=spaces.Box(
@@ -234,6 +240,9 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
                 ),
             )
         )
+        self.observation_space = gym.vector.utils.batch_space(
+            self.single_observation_space,
+            self.num_envs)
         self.goal = None
 
         self.compute_reward = None
