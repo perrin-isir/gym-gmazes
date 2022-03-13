@@ -76,7 +76,7 @@ class GMazeCommon:
         self._obs_dim = 3
         self._action_dim = 1
         self.num_steps = 0
-        high = np.tile(1.0 * np.ones(self._action_dim), (self.num_envs, 1))
+        high = np.ones(self._action_dim)
         low = -high
         self.single_action_space = spaces.Box(low=low, high=high, dtype=np.float64)
         self.action_space = gym.vector.utils.batch_space(
@@ -130,7 +130,7 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
 
         self.set_reward_function(default_reward_fun)
 
-        high = np.tile(1.0 * np.ones(self._obs_dim), (self.num_envs, 1))
+        high = np.ones(self._obs_dim)
         low = -high
         self.single_observation_space = spaces.Box(low, high, dtype=np.float64)
         self.observation_space = gym.vector.utils.batch_space(
@@ -217,17 +217,13 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
     def __init__(self, device: str = 'cpu', num_envs: int = 1):
         super().__init__(device, num_envs)
 
-        high = np.tile(1.0 * np.ones(self._obs_dim), (self.num_envs, 1))
+        high = np.ones(self._obs_dim)
         low = -high
         self._achieved_goal_dim = 2
         self._desired_goal_dim = 2
-        high_achieved_goal = np.tile(
-            1.0 * np.ones(self._achieved_goal_dim), (self.num_envs, 1)
-        )
+        high_achieved_goal = np.ones(self._achieved_goal_dim)
         low_achieved_goal = -high_achieved_goal
-        high_desired_goal = np.tile(
-            1.0 * np.ones(self._desired_goal_dim), (self.num_envs, 1)
-        )
+        high_desired_goal = np.ones(self._desired_goal_dim)
         low_desired_goal = -high_desired_goal
         self.single_observation_space = spaces.Dict(
             dict(
