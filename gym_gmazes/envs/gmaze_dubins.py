@@ -8,6 +8,7 @@ from typing import Optional
 import gym
 from gym import utils, spaces
 from gym import error
+from gym.envs.registration import EnvSpec
 import numpy as np
 import torch
 from matplotlib import collections as mc
@@ -79,6 +80,10 @@ class GMazeCommon:
         high = np.tile(1.0 * np.ones(self._action_dim), (self.batch_size, 1))
         low = -high
         self.action_space = spaces.Box(low=low, high=high, dtype=np.float64)
+
+    @staticmethod
+    def reset_done():
+        print('reset_done() not implemented')
 
     def set_reward_function(self, reward_function):
         self.reward_function = (

@@ -17,10 +17,12 @@ print("|    REGISTERING GMazeDubins-v0 from", envpath())
 register(
     id="GMazeDubins-v0",
     entry_point="gym_gmazes.envs:GMazeDubins",
+    max_episode_steps=70,
 )
 
 print("|    REGISTERING GMazeGoalDubins-v0 from", envpath())
 register(
     id="GMazeGoalDubins-v0",
     entry_point="gym_gmazes.envs:GMazeGoalDubins",
+    max_episode_steps=70,
 )
