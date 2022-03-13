@@ -70,12 +70,12 @@ class GMazeCommon:
         self.init_qpos = torch.tensor(
             np.tile(np.array([-1.0, 0.0, 0.0]), (self.num_envs, 1))
         ).to(self.device)
+        self.steps = None
         self.init_qvel = None  # velocities are not used
         self.state = self.init_qpos
         self.walls = []
         self._obs_dim = 3
         self._action_dim = 1
-        self.num_steps = 0
         high = np.ones(self._action_dim)
         low = -high
         self.single_action_space = spaces.Box(low=low, high=high, dtype=np.float64)
@@ -84,9 +84,9 @@ class GMazeCommon:
             self.num_envs)
         self.max_episode_steps = 70
 
-    @staticmethod
-    def reset_done():
-        print('reset_done() not implemented')
+    @abstractmethod
+    def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
+        pass
 
     def set_reward_function(self, reward_function):
         self.reward_function = (
@@ -164,10 +164,16 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
 
         observation = self.state
         reward = self.reward_function(action, observation)
-        self.num_steps += 1
-        done = torch.full((self.num_envs, 1), False).to(self.device)
-        info = None  # no info
-        return observation, reward, done, info
+        self.steps += 1
+        truncation = (self.steps == self.max_episode_steps).reshape((self.num_envs, 1))
+        done = truncation
+        info = {'truncation': truncation.detach().cpu().numpy()}
+        return (
+            observation.detach().cpu().numpy(),
+            reward.detach().cpu().numpy(),
+            done.detach().cpu().numpy(),
+            info
+        )
 
     def reset_model(self):
         # reset state to initial value
@@ -175,8 +181,14 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
 
     def reset(self, options=None, seed: Optional[int] = None, infos=None):
         self.reset_model()
-        self.num_steps = 0
-        return self.state
+        self.steps = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
+        return self.state.detach().cpu().numpy()
+
+    def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
+        from IPython import embed
+        embed()
+        self.steps = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
+        print('reset_done() not implemented')
 
     def set_state(self, qpos: torch.Tensor, qvel: torch.Tensor = None):
         self.state = qpos
