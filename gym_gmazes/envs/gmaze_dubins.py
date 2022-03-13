@@ -82,6 +82,7 @@ class GMazeCommon:
         self.action_space = gym.vector.utils.batch_space(
             self.single_action_space,
             self.num_envs)
+        self.max_episode_steps = 70
 
     @staticmethod
     def reset_done():
