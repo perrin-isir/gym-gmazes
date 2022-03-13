@@ -8,7 +8,6 @@ from typing import Optional
 import gym
 from gym import utils, spaces
 from gym import error
-from gym.envs.registration import EnvSpec
 import numpy as np
 import torch
 from matplotlib import collections as mc
@@ -60,8 +59,8 @@ def intersect(a, b, c, d):
 
 
 class GMazeCommon:
-    def __init__(self, device: str = "cpu", batch_size: int = 1):
-        self.batch_size = batch_size
+    def __init__(self, device: str = 'cpu', num_envs: int = 1):
+        self.num_envs = num_envs
         self.device = device
         utils.EzPickle.__init__(**locals())
         self.reward_function = None
@@ -69,7 +68,7 @@ class GMazeCommon:
 
         # initial position + orientation
         self.init_qpos = torch.tensor(
-            np.tile(np.array([-1.0, 0.0, 0.0]), (self.batch_size, 1))
+            np.tile(np.array([-1.0, 0.0, 0.0]), (self.num_envs, 1))
         ).to(self.device)
         self.init_qvel = None  # velocities are not used
         self.state = self.init_qpos
@@ -77,7 +76,7 @@ class GMazeCommon:
         self._obs_dim = 3
         self._action_dim = 1
         self.num_steps = 0
-        high = np.tile(1.0 * np.ones(self._action_dim), (self.batch_size, 1))
+        high = np.tile(1.0 * np.ones(self._action_dim), (self.num_envs, 1))
         low = -high
         self.action_space = spaces.Box(low=low, high=high, dtype=np.float64)
 
@@ -123,12 +122,12 @@ def default_reward_fun(action, new_obs):
 
 
 class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
-    def __init__(self, device: str = "cpu", batch_size: int = 1):
-        super().__init__(device, batch_size)
+    def __init__(self, device: str = 'cpu', num_envs: int = 1):
+        super().__init__(device, num_envs)
 
         self.set_reward_function(default_reward_fun)
 
-        high = np.tile(1.0 * np.ones(self._obs_dim), (self.batch_size, 1))
+        high = np.tile(1.0 * np.ones(self._obs_dim), (self.num_envs, 1))
         low = -high
         self.observation_space = spaces.Box(low, high, dtype=np.float64)
 
@@ -146,7 +145,7 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
             ns_2 = (ns_2 + 1.0) % 2.0 - 1.0
             new_state = torch.hstack((ns_01, ns_2.unsqueeze(dim=1)))
 
-            intersection = torch.full((self.batch_size,), False).to(self.device)
+            intersection = torch.full((self.num_envs,), False).to(self.device)
             for (w1, w2) in self.walls:
                 intersection = torch.logical_or(
                     intersection, intersect(self.state, new_state, w1, w2)
@@ -159,7 +158,7 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
         observation = self.state
         reward = self.reward_function(action, observation)
         self.num_steps += 1
-        done = torch.full((self.batch_size, 1), False).to(self.device)
+        done = torch.full((self.num_envs, 1), False).to(self.device)
         info = None  # no info
         return observation, reward, done, info
 
@@ -209,19 +208,19 @@ def default_success_function(achieved_goal: torch.Tensor, desired_goal: torch.Te
 
 
 class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
-    def __init__(self, device: str = "cpu", batch_size: int = 1):
-        super().__init__(device, batch_size)
+    def __init__(self, device: str = 'cpu', num_envs: int = 1):
+        super().__init__(device, num_envs)
 
-        high = np.tile(1.0 * np.ones(self._obs_dim), (self.batch_size, 1))
+        high = np.tile(1.0 * np.ones(self._obs_dim), (self.num_envs, 1))
         low = -high
         self._achieved_goal_dim = 2
         self._desired_goal_dim = 2
         high_achieved_goal = np.tile(
-            1.0 * np.ones(self._achieved_goal_dim), (self.batch_size, 1)
+            1.0 * np.ones(self._achieved_goal_dim), (self.num_envs, 1)
         )
         low_achieved_goal = -high_achieved_goal
         high_desired_goal = np.tile(
-            1.0 * np.ones(self._desired_goal_dim), (self.batch_size, 1)
+            1.0 * np.ones(self._desired_goal_dim), (self.num_envs, 1)
         )
         low_desired_goal = -high_desired_goal
         self.observation_space = spaces.Dict(
@@ -252,8 +251,8 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         self._is_success = success_function
 
     def _sample_goal(self):
-        # return (torch.rand(self.batch_size, 2) * 2. - 1).to(self.device)
-        return achieved_g(torch.rand(self.batch_size, 2) * 2.0 - 1).to(self.device)
+        # return (torch.rand(self.num_envs, 2) * 2. - 1).to(self.device)
+        return achieved_g(torch.rand(self.num_envs, 2) * 2.0 - 1).to(self.device)
 
     def reset_model(self):
         # reset state to initial value
@@ -283,7 +282,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
             ns_2 = (ns_2 + 1.0) % 2.0 - 1.0
             new_state = torch.hstack((ns_01, ns_2.unsqueeze(dim=1)))
 
-            intersection = torch.full((self.batch_size,), False).to(self.device)
+            intersection = torch.full((self.num_envs,), False).to(self.device)
             for (w1, w2) in self.walls:
                 intersection = torch.logical_or(
                     intersection, intersect(self.state, new_state, w1, w2)
@@ -296,9 +295,9 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         reward = self.compute_reward(achieved_g(self.state), self.goal, {})
         self.num_steps += 1
 
-        # done = torch.full((self.batch_size, 1), False).to(self.device)
+        # done = torch.full((self.num_envs, 1), False).to(self.device)
         info = {"is_success": self._is_success(achieved_g(self.state), self.goal)}
-        done = info["is_success"].reshape((self.batch_size, 1))
+        done = info["is_success"].reshape((self.num_envs, 1))
 
         return (
             {
