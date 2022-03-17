@@ -195,11 +195,10 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
 
     @torch.no_grad()
     def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
-        # from IPython import embed
-        # embed()
-        return self.reset(options, seed, infos)
-        # self.steps = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
-        # print('reset_done() not implemented')
+        self.state = torch.where(self.done == 1, self.init_qpos, self.state)
+        zeros = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
+        self.steps = torch.where(self.done.flatten() == 1, zeros, self.steps)
+        return self.state.detach().cpu().numpy()
 
     @torch.no_grad()
     def set_state(self, qpos: torch.Tensor, qvel: torch.Tensor = None):
@@ -307,17 +306,23 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         self.goal = self._sample_goal()  # sample goal
         self.steps = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
         return {
-            'observation': self.state,
-            'achieved_goal': achieved_g(self.state),
-            'desired_goal': self.goal,
+            'observation': self.state.detach().cpu().numpy(),
+            'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
+            'desired_goal': self.goal.detach().cpu().numpy(),
         }
 
     @torch.no_grad()
     def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
-        embed()
-        return self.reset(options, seed, infos)
-        # self.steps = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
-        # print('reset_done() not implemented')
+        self.state = torch.where(self.done == 1, self.init_qpos, self.state)
+        zeros = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
+        self.steps = torch.where(self.done.flatten() == 1, zeros, self.steps)
+        newgoal = self._sample_goal()
+        self.goal = torch.where(self.done == 1, newgoal, self.goal)
+        return {
+            'observation': self.state.detach().cpu().numpy(),
+            'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
+            'desired_goal': self.goal.detach().cpu().numpy(),
+        }
 
     @torch.no_grad()
     def step(self, action: torch.Tensor):
