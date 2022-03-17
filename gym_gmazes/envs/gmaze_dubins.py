@@ -62,7 +62,7 @@ def intersect(a, b, c, d):
 
 
 class GMazeCommon:
-    def __init__(self, device: str = 'cpu', num_envs: int = 1):
+    def __init__(self, device: str, num_envs: int = 1):
         self.num_envs = num_envs
         self.device = device
         utils.EzPickle.__init__(**locals())
@@ -143,9 +143,10 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
             self.num_envs)
 
     @torch.no_grad()
-    def step(self, action: torch.Tensor):
+    def step(self, action: np.ndarray):
         # add action to the state frame_skip times,
         # checking -1 & +1 boundaries and intersections with walls
+        action = torch.tensor(action).to(self.device)
         for k in range(self.frame_skip):
             cosval = torch.cos(torch.pi * self.state[:, 2])
             sinval = torch.sin(torch.pi * self.state[:, 2])
@@ -325,9 +326,10 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         }
 
     @torch.no_grad()
-    def step(self, action: torch.Tensor):
+    def step(self, action: np.ndarray):
         # add action to the state frame_skip times,
         # checking -1 and +1 boundaries and intersections with walls
+        action = torch.tensor(action).to(self.device)
         for k in range(self.frame_skip):
             cosval = torch.cos(torch.pi * self.state[:, 2])
             sinval = torch.sin(torch.pi * self.state[:, 2])
