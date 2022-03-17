@@ -359,6 +359,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         is_success = self._is_success(
             achieved_g(self.state), self.goal
         ).reshape((self.num_envs, 1))
+        truncation = truncation * (1 - is_success)
         info = {'is_success': is_success.detach().cpu().numpy(),
                 'truncation': truncation.detach().cpu().numpy()}
         self.done = torch.maximum(truncation, is_success)
