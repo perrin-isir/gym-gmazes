@@ -12,7 +12,6 @@ from gym import error
 import numpy as np
 import torch
 from matplotlib import collections as mc
-from IPython import embed
 
 
 class GoalEnv(gym.Env):
@@ -93,6 +92,11 @@ class GMazeCommon:
             self.single_action_space,
             self.num_envs)
         self.max_episode_steps = 70
+
+    def set_init_qpos(self, qpos):
+        self.init_qpos = torch.tensor(
+            np.tile(np.array(qpos), (self.num_envs, 1))
+        ).to(self.device)
 
     @abstractmethod
     def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
