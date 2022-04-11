@@ -1,9 +1,6 @@
 import random
 import math
-import time
 from gym_gmazes.envs.maze.cell import Cell
-import numpy as np
-import pylab as pl
 from matplotlib import collections as mc
 
 
