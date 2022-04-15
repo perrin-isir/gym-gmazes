@@ -1,5 +1,6 @@
 import random
 import math
+import numpy as np
 from gym_gmazes.envs.maze.cell import Cell
 from matplotlib import collections as mc
 
@@ -12,16 +13,12 @@ class Maze(object):
         num_cols (int): The height of the maze, in Cells
         num_rows (int): The width of the maze, in Cells
         grid_size (int): The area of the maze, also the total number of Cells in the maze
-        entry_coor Entry location cell of maze
-        exit_coor Exit location cell of maze
         generation_path : The path that was taken when generating the maze
-        solution_path : The path that was taken by a solver when solving the maze
-        initial_grid (list):
-        grid (list): A copy of initial_grid (possible this is un-needed)
+        grid (list): A list of Cell objects (the grid)
         """
 
     def __init__(self, num_rows, num_cols, seed=None, standard=False):
-        """Creates a gird of Cell objects that are neighbors to each other.
+        """Creates a gird of Cell objects that are neighbours to each other.
 
             Args:
                     num_rows (int): The width of the maze, in cells
@@ -33,12 +30,8 @@ class Maze(object):
         self.num_cols = num_cols
         self.num_rows = num_rows
         self.grid_size = num_rows*num_cols
-        self.initial_grid = self.generate_grid()
-        self.grid = self.initial_grid
-        self.entry_coor = self._pick_random_entry_exit(None)
-        self.exit_coor = self._pick_random_entry_exit(self.entry_coor)
+        self.grid = self.generate_grid()
         self.generation_path = []
-        self.solution_path = None
         if not standard:
             self.generate_maze((0, 0))
         elif self.num_cols == 3:
@@ -131,16 +124,16 @@ class Maze(object):
         return grid
 
     def find_neighbours(self, cell_row, cell_col):
-        """Finds all existing and unvisited neighbours of a cell in the
-        grid. Return a list of tuples containing indices for the unvisited neighbours.
+        """Finds all existing neighbours of a cell in the
+        grid. Return a list of tuples containing indices for the neighbours.
 
         Args:
             cell_row (int):
             cell_col (int):
 
         Return:
-            None: If there are no unvisited neighbors
-            list: A list of neighbors that have not been visited
+            list: A list of neighbours
+            None: If there are no neighbours
         """
         neighbours = list()
 
@@ -156,20 +149,19 @@ class Maze(object):
 
         if len(neighbours) > 0:
             return neighbours
-
         else:
             return None     # None if no unvisited neighbours found
 
     def _validate_neighbours_generate(self, neighbour_indices):
         """Function that validates whether a neighbour is unvisited or not. When generating
-        the maze, we only want to move to move to unvisited cells (unless we are backtracking).
+        the maze, we only want to move to unvisited cells (unless we are backtracking).
 
         Args:
             neighbour_indices:
 
         Return:
-            True: If the neighbor has been visited
-            False: If the neighbor has not been visited
+            True: If the neighbour has been visited
+            False: If the neighbour has not been visited
 
         """
 
@@ -314,16 +306,38 @@ class Maze(object):
         #print("Number of moves performed: {}".format(len(path)))
         #print("Execution time for algorithm: {:.4f}".format(time.clock() - time_start))
 
-        self.grid[self.entry_coor[0]][self.entry_coor[1]].set_as_entry_exit("entry",
-            self.num_rows-1, self.num_cols-1)
-        self.grid[self.exit_coor[0]][self.exit_coor[1]].set_as_entry_exit("exit",
-            self.num_rows-1, self.num_cols-1)
-
         for i in range(self.num_rows):
             for j in range(self.num_cols):
                 self.grid[i][j].visited = False      # Set all cells to unvisited before returning grid
 
         self.generation_path = path
+
+    def random_path(self, start_coor):
+        """Returns a path starting at coordinates start_coor.
+
+        Args:
+            start_coor: The starting point of the path
+
+        """
+        set_coors = set()
+        path = []
+        current_coor = start_coor
+        done = False
+        while not done:
+            done = True
+            # if len(path) > 0:
+            #     path.append(((path[-1][0] + current_coor[0])/2.,
+            #                  (path[-1][1] + current_coor[1])/2.))
+            path.append(current_coor)
+            set_coors.add(current_coor)
+            neighs = self.find_neighbours(current_coor[0], current_coor[1])
+            for nei in neighs:
+                if not self.grid[current_coor[0]][current_coor[1]].is_walls_between(
+                        self.grid[nei[0]][nei[1]]) and nei not in set_coors:
+                    current_coor = nei
+                    done = False
+                    break
+        return path[1:]
 
     def __str__(self):
         buffer = [[] for i in range(len(self.grid)*2+1)]
@@ -353,51 +367,10 @@ class Maze(object):
     def __repr__(self):
         return self.__str__()
 
-    def draw(self,ax,thick):
-        lines = []
-        if thick>0:
-            def add_hwall(lines,i,j):
-                t=thick
-                lines.append([(i-t,j),(i-t,j+1)])
-                lines.append([(i-t,j+1),(i+t,j+1)])
-                lines.append([(i+t,j),(i+t,j+1)])
-                lines.append([(i+t,j),(i-t,j)])
-            def add_vwall(lines,i,j):
-                t=thick
-                lines.append([(i,j-t),(i+1,j-t)])
-                lines.append([(i+1,j-t),(i+1,j+t)])
-                lines.append([(i,j+t),(i+1,j+t)])
-                lines.append([(i,j+t),(i,j-t)])
-            for i in range(len(self.grid)):
-                for j in range(len(self.grid[i])):
-                    if self.grid[i][j].walls["top"]:
-                        add_hwall(lines,i,j)
-                    if self.grid[i][j].walls["bottom"]:
-                        add_hwall(lines,i+1,j)
-                    if self.grid[i][j].walls["left"]:
-                        add_vwall(lines,i,j)
-                        lines.append([(i,j),(i+1,j)])
-                    if self.grid[i][j].walls["right"]:
-                        add_vwall(lines,i,j+1)
-        else:
-            for i in range(len(self.grid)):
-                for j in range(len(self.grid[i])):
-                    if self.grid[i][j].walls["top"]:
-                        lines.append([(i,j),(i,j+1)])
-                    if self.grid[i][j].walls["bottom"]:
-                        lines.append([(i+1,j),(i+1,j+1)])
-                    if self.grid[i][j].walls["left"]:
-                        lines.append([(i,j),(i+1,j)])
-                    if self.grid[i][j].walls["right"]:
-                        lines.append([(i,j+1),(i+1,j+1)])
-        lc = mc.LineCollection(lines, linewidths=2)
-
-        ax.add_collection(lc)
-
 
 def get_maze(num_rows, num_cols, thin=True, seed=None, standard=False):
     m = Maze(num_rows, num_cols, seed, standard)
-    lines = []
+    walls = []
 
     thickness = 0. if thin else 0.1
 
@@ -418,15 +391,15 @@ def get_maze(num_rows, num_cols, thin=True, seed=None, standard=False):
     for i in range(len(m.grid)):
         for j in range(len(m.grid[i])):
             if m.grid[i][j].walls["top"]:
-                add_hwall(lines, i, j, thickness)
+                add_hwall(walls, i, j, thickness)
             if m.grid[i][j].walls["bottom"]:
-                add_hwall(lines, i + 1, j, thickness)
+                add_hwall(walls, i + 1, j, thickness)
             if m.grid[i][j].walls["left"]:
-                add_vwall(lines, i, j, thickness)
+                add_vwall(walls, i, j, thickness)
             if m.grid[i][j].walls["right"]:
-                add_vwall(lines, i, j + 1, thickness)
+                add_vwall(walls, i, j + 1, thickness)
 
-    for pt1, pt2 in lines:
+    for pt1, pt2 in walls:
         pt1[0] = pt1[0]/num_rows * 2. - 1.
         pt2[0] = pt2[0]/num_rows * 2. - 1.
         pt1[1] = pt1[1]/num_cols * 2. - 1.
@@ -449,5 +422,12 @@ def get_maze(num_rows, num_cols, thin=True, seed=None, standard=False):
         orientation
     ]
 
-    return init_qpos, lines
+    path = m.random_path(coor)
+    for i, c in enumerate(path):
+        path[i] = np.array([
+            (c[0] + 0.5) / num_rows * 2. - 1.,
+            (c[1] + 0.5) / num_cols * 2. - 1.
+        ])
+
+    return init_qpos, walls, path
 

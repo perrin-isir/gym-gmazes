@@ -16,7 +16,7 @@ from matplotlib import collections as mc
 
 class GoalEnv(gym.Env):
     """The GoalEnv class that was migrated from gym (v0.22) to gym-robotics.
-    We add a set_desired_goal() function."""
+    """
 
     def reset(self, options=None, seed: Optional[int] = None, infos=None):
         super().reset(seed=seed)
@@ -43,11 +43,6 @@ class GoalEnv(gym.Env):
                 assert reward == env.compute_reward(ob['achieved_goal'],
                                                     ob['desired_goal'], info)
         """
-        raise NotImplementedError
-
-    @abstractmethod
-    def set_desired_goal(self, goal):
-        """Set the goal"""
         raise NotImplementedError
 
 
@@ -249,7 +244,8 @@ def default_compute_reward(
         info: dict
 ):
     distance_threshold = 0.1
-    reward_type = "sparse"
+    # reward_type = "sparse"
+    reward_type = "dense"
     d = goal_distance(achieved_goal, desired_goal)
     if reward_type == "sparse":
         return -1.0 * (d > distance_threshold)
@@ -304,17 +300,16 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
 
     @torch.no_grad()
     def _sample_goal(self):
-        # return (torch.rand(self.num_envs, 2) * 2. - 1).to(self.device)
         return achieved_g(torch.rand(self.num_envs, 2) * 2.0 - 1).to(self.device)
 
     @torch.no_grad()
-    def set_desired_goal(self, goal):
-        self.goal = goal
+    def set_goal(self, goal):
+        self.goal = torch.tensor(goal).to(self.device)
 
     @torch.no_grad()
     def reset(self, options=None, seed: Optional[int] = None, infos=None):
         self.common_reset()
-        self.set_desired_goal(self._sample_goal())  # sample goal
+        self.set_goal(self._sample_goal())  # sample goal
         return {
             'observation': self.state.detach().cpu().numpy(),
             'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
@@ -325,7 +320,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
     def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
         self.common_reset_done()
         newgoal = self._sample_goal()
-        self.set_desired_goal(torch.where(self.done == 1, newgoal, self.goal))
+        self.set_goal(torch.where(self.done == 1, newgoal, self.goal))
         return {
             'observation': self.state.detach().cpu().numpy(),
             'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
