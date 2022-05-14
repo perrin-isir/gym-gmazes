@@ -18,7 +18,8 @@ class GoalEnv(gym.Env):
     """The GoalEnv class that was migrated from gym (v0.22) to gym-robotics.
     """
 
-    def reset(self, options=None, seed: Optional[int] = None, infos=None):
+    def reset(self,
+              seed: Optional[int] = None, return_info: bool = False, options=None):
         super().reset(seed=seed)
         # Enforce that each GoalEnv uses a Goal-compatible observation space.
         if not isinstance(self.observation_space, gym.spaces.Dict):
@@ -74,7 +75,7 @@ class GMazeCommon:
             np.tile(np.array([-1.0, 0.0, 0.0]), (self.num_envs, 1))
         ).to(self.device)
         self.steps = None
-        self.done = None
+        self.done = torch.zeros((num_envs, 1), dtype=torch.int).to(self.device)
         self.init_qvel = None  # velocities are not used
         self.state = self.init_qpos
         self.walls = []
@@ -114,10 +115,13 @@ class GMazeCommon:
         self.steps = torch.where(self.done.flatten() == 1, zeros, self.steps)
 
     @torch.no_grad()
-    def common_step(self, action: np.ndarray):
+    def common_step(self, action: Union[np.ndarray, torch.Tensor]):
         # add action to the state frame_skip times,
         # checking -1 & +1 boundaries and intersections with walls
-        action = torch.tensor(action).to(self.device)
+        if torch.is_tensor(action):
+            action = action.to(self.device)
+        else:
+            action = torch.tensor(action).to(self.device)
         for k in range(self.frame_skip):
             cosval = torch.cos(torch.pi * self.state[:, 2])
             sinval = torch.sin(torch.pi * self.state[:, 2])
@@ -214,14 +218,22 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
         )
 
     @torch.no_grad()
-    def reset(self, options=None, seed: Optional[int] = None, infos=None):
+    def reset(self,
+              seed: Optional[int] = None, return_info: bool = False, options=None):
         self.common_reset()
-        return self.state.detach().cpu().numpy()
+        if return_info:
+            return self.state.detach().cpu().numpy(), {}
+        else:
+            return self.state.detach().cpu().numpy()
 
     @torch.no_grad()
-    def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
+    def reset_done(self,
+                   seed: Optional[int] = None, return_info: bool = False, options=None):
         self.common_reset_done()
-        return self.state.detach().cpu().numpy()
+        if return_info:
+            return self.state.detach().cpu().numpy(), {}
+        else:
+            return self.state.detach().cpu().numpy()
 
 
 @torch.no_grad()
@@ -303,29 +315,42 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         return achieved_g(torch.rand(self.num_envs, 2) * 2.0 - 1).to(self.device)
 
     @torch.no_grad()
-    def set_goal(self, goal):
-        self.goal = torch.tensor(goal).to(self.device)
+    def set_goal(self, goal: Union[np.ndarray, torch.Tensor]):
+        if torch.is_tensor(goal):
+            self.goal = goal.to(self.device)
+        else:
+            self.goal = torch.tensor(goal).to(self.device)
 
     @torch.no_grad()
-    def reset(self, options=None, seed: Optional[int] = None, infos=None):
+    def reset(self,
+              seed: Optional[int] = None, return_info: bool = False, options=None):
         self.common_reset()
         self.set_goal(self._sample_goal())  # sample goal
-        return {
+        res = {
             'observation': self.state.detach().cpu().numpy(),
             'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
             'desired_goal': self.goal.detach().cpu().numpy(),
         }
+        if return_info:
+            return res, {}
+        else:
+            return res
 
     @torch.no_grad()
-    def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
+    def reset_done(self,
+                   seed: Optional[int] = None, return_info: bool = False, options=None):
         self.common_reset_done()
         newgoal = self._sample_goal()
         self.set_goal(torch.where(self.done == 1, newgoal, self.goal))
-        return {
+        res = {
             'observation': self.state.detach().cpu().numpy(),
             'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
             'desired_goal': self.goal.detach().cpu().numpy(),
         }
+        if return_info:
+            return res, {}
+        else:
+            return res
 
     @torch.no_grad()
     def step(self, action: np.ndarray):
