@@ -372,11 +372,13 @@ def get_maze(num_rows, num_cols, thin=True, seed=None, standard=False):
     else:
         orientation = 0.0
 
-    init_qpos = [
-        (coor[0] + 0.5) / num_rows * 2.0 - 1.0,
-        (coor[1] + 0.5) / num_cols * 2.0 - 1.0,
-        orientation,
-    ]
+    init_qpos = np.array(
+        [
+            (coor[0] + 0.5) / num_rows * 2.0 - 1.0,
+            (coor[1] + 0.5) / num_cols * 2.0 - 1.0,
+            orientation,
+        ]
+    )
 
     path = m.random_path(coor)
     for i, c in enumerate(path):
@@ -384,4 +386,12 @@ def get_maze(num_rows, num_cols, thin=True, seed=None, standard=False):
             [(c[0] + 0.5) / num_rows * 2.0 - 1.0, (c[1] + 0.5) / num_cols * 2.0 - 1.0]
         )
 
-    return init_qpos, walls, path
+    reset_states = [init_qpos.copy()]
+    previous_elt = path[0]
+    for elt in path[1:]:
+        v = elt - previous_elt
+        orientation = np.arctan2(v[1], v[0]) / np.pi
+        reset_states.append(np.array([previous_elt[0], previous_elt[1], orientation]))
+        previous_elt = elt
+
+    return init_qpos, walls, path, reset_states

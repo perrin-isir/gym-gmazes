@@ -63,17 +63,18 @@ def intersect(a, b, c, d):
 
 
 class GMazeCommon:
-    def __init__(self, device: str, num_envs: int = 1):
+    def __init__(self, device: str, num_envs: int):
         self.num_envs = num_envs
         self.device = device
         utils.EzPickle.__init__(**locals())
         self.compute_reward = None
         self.frame_skip = 2
-
         # initial position + orientation
         self.init_qpos = torch.tensor(
             np.tile(np.array([-1.0, 0.0, 0.0]), (self.num_envs, 1))
         ).to(self.device)
+        self.reset_states = None
+        self.reset_steps = None
         self.steps = None
         self.done = torch.zeros((num_envs, 1), dtype=torch.int).to(self.device)
         self.init_qvel = None  # velocities are not used
@@ -94,6 +95,15 @@ class GMazeCommon:
             self.device
         )
 
+    def set_reset_states(
+        self, reset_states: list, reset_steps: Union[list, None] = None
+    ):
+        self.reset_states = np.array(reset_states)
+        if reset_steps is None:
+            self.reset_steps = np.zeros((len(reset_states),), dtype=int)
+        else:
+            self.reset_steps = np.array(reset_steps)
+
     @abstractmethod
     def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
         pass
@@ -101,18 +111,38 @@ class GMazeCommon:
     @torch.no_grad()
     def reset_model(self):
         # reset state to initial value
-        self.state = self.init_qpos
+        if self.reset_states is None:
+            self.state = self.init_qpos
+            self.steps = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
+            return {}
+        else:
+            indices = np.random.choice(len(self.reset_states), self.num_envs)
+            self.state = torch.tensor(self.reset_states[indices]).to(self.device)
+            self.steps = torch.tensor(self.reset_steps[indices], dtype=torch.int).to(
+                self.device
+            )
+            return {"reset_states": indices}
 
     @torch.no_grad()
     def common_reset(self):
-        self.reset_model()  # reset state to initial value
-        self.steps = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
+        return self.reset_model()  # reset state to initial value
 
     @torch.no_grad()
     def common_reset_done(self):
-        self.state = torch.where(self.done == 1, self.init_qpos, self.state)
-        zeros = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
-        self.steps = torch.where(self.done.flatten() == 1, zeros, self.steps)
+        if self.reset_states is None:
+            self.state = torch.where(self.done == 1, self.init_qpos, self.state)
+            zeros = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
+            self.steps = torch.where(self.done.flatten() == 1, zeros, self.steps)
+            return {}
+        else:
+            indices = np.random.choice(len(self.reset_states), self.num_envs)
+            r_state = torch.tensor(self.reset_states[indices]).to(self.device)
+            r_steps = torch.tensor(self.reset_steps[indices], dtype=torch.int).to(
+                self.device
+            )
+            self.state = torch.where(self.done == 1, r_state, self.state)
+            self.steps = torch.where(self.done.flatten() == 1, r_steps, self.steps)
+            return {"reset_states": indices}
 
     @torch.no_grad()
     def common_step(self, action: Union[np.ndarray, torch.Tensor]):
@@ -221,9 +251,9 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
     def reset(
         self, seed: Optional[int] = None, return_info: bool = False, options=None
     ):
-        self.common_reset()
+        info = self.common_reset()
         if return_info:
-            return self.state.detach().cpu().numpy(), {}
+            return self.state.detach().cpu().numpy(), info
         else:
             return self.state.detach().cpu().numpy()
 
@@ -231,9 +261,9 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
     def reset_done(
         self, seed: Optional[int] = None, return_info: bool = False, options=None
     ):
-        self.common_reset_done()
+        info = self.common_reset_done()
         if return_info:
-            return self.state.detach().cpu().numpy(), {}
+            return self.state.detach().cpu().numpy(), info
         else:
             return self.state.detach().cpu().numpy()
 
@@ -327,7 +357,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
     def reset(
         self, seed: Optional[int] = None, return_info: bool = False, options=None
     ):
-        self.common_reset()
+        info = self.common_reset()
         self.set_goal(self._sample_goal())  # sample goal
         res = {
             "observation": self.state.detach().cpu().numpy(),
@@ -335,7 +365,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
             "desired_goal": self.goal.detach().cpu().numpy(),
         }
         if return_info:
-            return res, {}
+            return res, info
         else:
             return res
 
@@ -343,7 +373,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
     def reset_done(
         self, seed: Optional[int] = None, return_info: bool = False, options=None
     ):
-        self.common_reset_done()
+        info = self.common_reset_done()
         newgoal = self._sample_goal()
         self.set_goal(torch.where(self.done == 1, newgoal, self.goal))
         res = {
@@ -352,7 +382,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
             "desired_goal": self.goal.detach().cpu().numpy(),
         }
         if return_info:
-            return res, {}
+            return res, info
         else:
             return res
 
