@@ -1,5 +1,10 @@
 # gym-gmazes
-Mazes environments for reinforcement learning (with OpenAI Gym interface)
+Maze environments for reinforcement learning (with OpenAI Gym interface).
+
+The interface is in NumPy, but internally, parallel rollouts are managed in PyTorch.
+
+See this [*xpag*](https://github.com/perrin-isir/xpag) tutorial for an example of policy training in one of the gym-gmazes environments (GMazeGoalDubins-v0):  
+[https://colab.research.google.com/github/perrin-isir/xpag-tutorials/blob/main/train_gmazes.ipynb](https://colab.research.google.com/github/perrin-isir/xpag-tutorials/blob/main/train_gmazes.ipynb)
 
 ## Installation
 

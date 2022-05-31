@@ -15,11 +15,11 @@ from matplotlib import collections as mc
 
 
 class GoalEnv(gym.Env):
-    """The GoalEnv class that was migrated from gym (v0.22) to gym-robotics.
-    """
+    """The GoalEnv class that was migrated from gym (v0.22) to gym-robotics."""
 
-    def reset(self,
-              seed: Optional[int] = None, return_info: bool = False, options=None):
+    def reset(
+        self, seed: Optional[int] = None, return_info: bool = False, options=None
+    ):
         super().reset(seed=seed)
         # Enforce that each GoalEnv uses a Goal-compatible observation space.
         if not isinstance(self.observation_space, gym.spaces.Dict):
@@ -85,14 +85,14 @@ class GMazeCommon:
         low = -high
         self.single_action_space = spaces.Box(low=low, high=high, dtype=np.float64)
         self.action_space = gym.vector.utils.batch_space(
-            self.single_action_space,
-            self.num_envs)
+            self.single_action_space, self.num_envs
+        )
         self.max_episode_steps = 70
 
     def set_init_qpos(self, qpos):
-        self.init_qpos = torch.tensor(
-            np.tile(np.array(qpos), (self.num_envs, 1))
-        ).to(self.device)
+        self.init_qpos = torch.tensor(np.tile(np.array(qpos), (self.num_envs, 1))).to(
+            self.device
+        )
 
     @abstractmethod
     def reset_done(self, options=None, seed: Optional[int] = None, infos=None):
@@ -143,8 +143,9 @@ class GMazeCommon:
                 intersection
             )
         self.steps += 1
-        truncation = (self.steps == self.max_episode_steps).double().reshape(
-            (self.num_envs, 1))
+        truncation = (
+            (self.steps == self.max_episode_steps).double().reshape((self.num_envs, 1))
+        )
         return action, truncation
 
     def set_reward_function(self, reward_function):
@@ -184,12 +185,12 @@ class GMazeCommon:
 
 @torch.no_grad()
 def default_reward_fun(action, new_obs):
-    reward = 1. * (torch.logical_and(new_obs[:, 0] > 0.5, new_obs[:, 1] > 0.5))
+    reward = 1.0 * (torch.logical_and(new_obs[:, 0] > 0.5, new_obs[:, 1] > 0.5))
     return torch.unsqueeze(reward, dim=-1)
 
 
 class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
-    def __init__(self, device: str = 'cpu', num_envs: int = 1):
+    def __init__(self, device: str = "cpu", num_envs: int = 1):
         super().__init__(device, num_envs)
 
         self.set_reward_function(default_reward_fun)
@@ -198,28 +199,28 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
         low = -high
         self.single_observation_space = spaces.Box(low, high, dtype=np.float64)
         self.observation_space = gym.vector.utils.batch_space(
-            self.single_observation_space,
-            self.num_envs)
+            self.single_observation_space, self.num_envs
+        )
 
     @torch.no_grad()
     def step(self, action: np.ndarray):
         action, truncation = self.common_step(action)
 
         observation = self.state
-        reward = self.compute_reward(action, observation).reshape(
-            (self.num_envs, 1))
+        reward = self.compute_reward(action, observation).reshape((self.num_envs, 1))
         self.done = truncation
-        info = {'truncation': truncation.detach().cpu().numpy()}
+        info = {"truncation": truncation.detach().cpu().numpy()}
         return (
             observation.detach().cpu().numpy(),
             reward.detach().cpu().numpy(),
             self.done.detach().cpu().numpy(),
-            info
+            info,
         )
 
     @torch.no_grad()
-    def reset(self,
-              seed: Optional[int] = None, return_info: bool = False, options=None):
+    def reset(
+        self, seed: Optional[int] = None, return_info: bool = False, options=None
+    ):
         self.common_reset()
         if return_info:
             return self.state.detach().cpu().numpy(), {}
@@ -227,8 +228,9 @@ class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
             return self.state.detach().cpu().numpy()
 
     @torch.no_grad()
-    def reset_done(self,
-                   seed: Optional[int] = None, return_info: bool = False, options=None):
+    def reset_done(
+        self, seed: Optional[int] = None, return_info: bool = False, options=None
+    ):
         self.common_reset_done()
         if return_info:
             return self.state.detach().cpu().numpy(), {}
@@ -251,9 +253,9 @@ def goal_distance(goal_a, goal_b):
 
 @torch.no_grad()
 def default_compute_reward(
-        achieved_goal: Union[np.ndarray, torch.Tensor],
-        desired_goal: Union[np.ndarray, torch.Tensor],
-        info: dict
+    achieved_goal: Union[np.ndarray, torch.Tensor],
+    desired_goal: Union[np.ndarray, torch.Tensor],
+    info: dict,
 ):
     distance_threshold = 0.1
     # reward_type = "sparse"
@@ -273,7 +275,7 @@ def default_success_function(achieved_goal: torch.Tensor, desired_goal: torch.Te
 
 
 class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
-    def __init__(self, device: str = 'cpu', num_envs: int = 1):
+    def __init__(self, device: str = "cpu", num_envs: int = 1):
         super().__init__(device, num_envs)
 
         high = np.ones(self._obs_dim)
@@ -296,8 +298,8 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
             )
         )
         self.observation_space = gym.vector.utils.batch_space(
-            self.single_observation_space,
-            self.num_envs)
+            self.single_observation_space, self.num_envs
+        )
         self.goal = None
 
         self.compute_reward = None
@@ -322,14 +324,15 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
             self.goal = torch.tensor(goal).to(self.device)
 
     @torch.no_grad()
-    def reset(self,
-              seed: Optional[int] = None, return_info: bool = False, options=None):
+    def reset(
+        self, seed: Optional[int] = None, return_info: bool = False, options=None
+    ):
         self.common_reset()
         self.set_goal(self._sample_goal())  # sample goal
         res = {
-            'observation': self.state.detach().cpu().numpy(),
-            'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
-            'desired_goal': self.goal.detach().cpu().numpy(),
+            "observation": self.state.detach().cpu().numpy(),
+            "achieved_goal": achieved_g(self.state).detach().cpu().numpy(),
+            "desired_goal": self.goal.detach().cpu().numpy(),
         }
         if return_info:
             return res, {}
@@ -337,15 +340,16 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
             return res
 
     @torch.no_grad()
-    def reset_done(self,
-                   seed: Optional[int] = None, return_info: bool = False, options=None):
+    def reset_done(
+        self, seed: Optional[int] = None, return_info: bool = False, options=None
+    ):
         self.common_reset_done()
         newgoal = self._sample_goal()
         self.set_goal(torch.where(self.done == 1, newgoal, self.goal))
         res = {
-            'observation': self.state.detach().cpu().numpy(),
-            'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
-            'desired_goal': self.goal.detach().cpu().numpy(),
+            "observation": self.state.detach().cpu().numpy(),
+            "achieved_goal": achieved_g(self.state).detach().cpu().numpy(),
+            "desired_goal": self.goal.detach().cpu().numpy(),
         }
         if return_info:
             return res, {}
@@ -357,20 +361,23 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         _, truncation = self.common_step(action)
 
         reward = self.compute_reward(achieved_g(self.state), self.goal, {}).reshape(
-            (self.num_envs, 1))
-        is_success = self._is_success(
-            achieved_g(self.state), self.goal
-        ).reshape((self.num_envs, 1))
+            (self.num_envs, 1)
+        )
+        is_success = self._is_success(achieved_g(self.state), self.goal).reshape(
+            (self.num_envs, 1)
+        )
         truncation = truncation * (1 - is_success)
-        info = {'is_success': is_success.detach().cpu().numpy(),
-                'truncation': truncation.detach().cpu().numpy()}
+        info = {
+            "is_success": is_success.detach().cpu().numpy(),
+            "truncation": truncation.detach().cpu().numpy(),
+        }
         self.done = torch.maximum(truncation, is_success)
 
         return (
             {
-                'observation': self.state.detach().cpu().numpy(),
-                'achieved_goal': achieved_g(self.state).detach().cpu().numpy(),
-                'desired_goal': self.goal.detach().cpu().numpy(),
+                "observation": self.state.detach().cpu().numpy(),
+                "achieved_goal": achieved_g(self.state).detach().cpu().numpy(),
+                "desired_goal": self.goal.detach().cpu().numpy(),
             },
             reward.detach().cpu().numpy(),
             self.done.detach().cpu().numpy(),
