@@ -257,36 +257,39 @@ class Maze(object):
 
         self.generation_path = path
 
-    def random_path(self, start_coor):
+    def random_path(self, start_coor, seed=None):
         """Returns a path starting at coordinates start_coor.
 
         Args:
             start_coor: The starting point of the path
-
+            seed: The seed
         """
-        set_coors = set()
-        path = []
-        current_coor = start_coor
-        done = False
-        while not done:
-            done = True
-            # if len(path) > 0:
-            #     path.append(((path[-1][0] + current_coor[0])/2.,
-            #                  (path[-1][1] + current_coor[1])/2.))
-            path.append(current_coor)
-            set_coors.add(current_coor)
-            neighs = self.find_neighbours(current_coor[0], current_coor[1])
-            for nei in neighs:
-                if (
-                    not self.grid[current_coor[0]][current_coor[1]].is_walls_between(
-                        self.grid[nei[0]][nei[1]]
-                    )
-                    and nei not in set_coors
-                ):
-                    current_coor = nei
-                    done = False
-                    break
-        return path[1:]
+        rng = np.random.default_rng(seed)
+        longest_path = []
+        for i in range(20):
+            set_coors = set()
+            path = []
+            current_coor = start_coor
+            done = False
+            while not done:
+                done = True
+                path.append(current_coor)
+                set_coors.add(current_coor)
+                neighs = self.find_neighbours(current_coor[0], current_coor[1])
+                rng.shuffle(neighs)
+                for nei in neighs:
+                    if (
+                        not self.grid[current_coor[0]][
+                            current_coor[1]
+                        ].is_walls_between(self.grid[nei[0]][nei[1]])
+                        and nei not in set_coors
+                    ):
+                        current_coor = nei
+                        done = False
+                        break
+            if len(path) > len(longest_path):
+                longest_path = path.copy()
+        return longest_path[1:]
 
     def __str__(self):
         buffer = [[] for i in range(len(self.grid) * 2 + 1)]
@@ -380,7 +383,7 @@ def get_maze(num_rows, num_cols, thin=True, seed=None, standard=False):
         ]
     )
 
-    path = m.random_path(coor)
+    path = m.random_path(coor, seed)
     for i, c in enumerate(path):
         path[i] = np.array(
             [(c[0] + 0.5) / num_rows * 2.0 - 1.0, (c[1] + 0.5) / num_cols * 2.0 - 1.0]
