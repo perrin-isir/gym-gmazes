@@ -7,6 +7,6 @@ dependencies:
 - pip>=21.3.1
 - conda>=4.11.0
 - pip:
-    - gym>=0.22.0
+    - gym>=0.24.1
     - torch>=1.10.0
     - matplotlib>=3.1.3

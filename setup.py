@@ -10,7 +10,7 @@ setup(
     url="https://github.com/perrin-isir/gym-gmazes",
     packages=find_packages(),
     install_requires=[
-        "gym>=0.22.0",
+        "gym>=0.24.1",
         "torch>=1.10.0",
         "matplotlib>=3.1.3",
     ],
