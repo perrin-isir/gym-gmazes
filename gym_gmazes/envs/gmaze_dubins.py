@@ -133,7 +133,7 @@ class GMazeCommon:
         if torch.is_tensor(done):
             done = done.to(self.device)
         else:
-            done = torch.tensor(done).to(self.device)
+            done = torch.tensor(np.asarray(done)).to(self.device)
         if self.reset_states is None:
             self.state = torch.where(done == 1, self.init_qpos, self.state)
             zeros = torch.zeros(self.num_envs, dtype=torch.int).to(self.device)
@@ -156,7 +156,7 @@ class GMazeCommon:
         if torch.is_tensor(action):
             action = action.to(self.device)
         else:
-            action = torch.tensor(action).to(self.device)
+            action = torch.tensor(np.asarray(action)).to(self.device)
         for k in range(self.frame_skip):
             cosval = torch.cos(torch.pi * self.state[:, 2])
             sinval = torch.sin(torch.pi * self.state[:, 2])
@@ -361,7 +361,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         if torch.is_tensor(goal):
             self.goal = goal.to(self.device)
         else:
-            self.goal = torch.tensor(goal).to(self.device)
+            self.goal = torch.tensor(np.asarray(goal)).to(self.device)
 
     @torch.no_grad()
     def reset(
@@ -391,7 +391,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
         if torch.is_tensor(done):
             done = done.to(self.device)
         else:
-            done = torch.tensor(done).to(self.device)
+            done = torch.tensor(np.asarray(done)).to(self.device)
         info = self.common_reset_done(done)
         newgoal = self._sample_goal()
         self.set_goal(torch.where(done == 1, newgoal, self.goal))
