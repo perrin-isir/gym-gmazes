@@ -11,7 +11,6 @@ setup(
     packages=find_packages(),
     install_requires=[
         "gym>=0.24.1",
-        "torch>=1.10.0",
         "matplotlib>=3.1.3",
     ],
     license="LICENSE",
