@@ -7,7 +7,7 @@ from abc import abstractmethod
 from typing import Optional
 import gym
 from typing import Union
-from gym import utils, spaces
+from gym import spaces
 from gym import error
 import numpy as np
 from matplotlib import collections as mc
@@ -72,7 +72,6 @@ def intersect(a, b, c, d):
 class GMazeCommon:
     def __init__(self, num_envs: int):
         self.num_envs = num_envs
-        utils.EzPickle.__init__(**locals())
         self.compute_reward = None
         self.frame_skip = 2
         # initial position + orientation
@@ -210,7 +209,7 @@ def default_reward_fun(action, new_obs):
     return np.expand_dims(reward, axis=-1)
 
 
-class GMazeDubins(GMazeCommon, gym.Env, utils.EzPickle, ABC):
+class GMazeDubins(GMazeCommon, gym.Env, ABC):
     def __init__(self, num_envs: int = 1):
         super().__init__(num_envs)
 
@@ -290,7 +289,7 @@ def default_success_function(achieved_goal: np.ndarray, desired_goal: np.ndarray
     return 1.0 * (d < distance_threshold)
 
 
-class GMazeGoalDubins(GMazeCommon, GoalEnv, utils.EzPickle, ABC):
+class GMazeGoalDubins(GMazeCommon, GoalEnv, ABC):
     def __init__(self, num_envs: int = 1):
         super().__init__(num_envs)
 
