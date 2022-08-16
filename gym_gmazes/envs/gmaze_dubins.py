@@ -1,7 +1,7 @@
 # Copyright 2022 Nicolas Perrin-Gilbert.
 #
 # Licensed under the BSD 3-Clause License.
-
+import abc
 from abc import ABC
 from abc import abstractmethod
 from typing import Optional
@@ -13,8 +13,14 @@ import numpy as np
 from matplotlib import collections as mc
 
 
+class GymEnvMetaClass(type(gym.Env), abc.ABCMeta):
+    pass
+
+
 class GoalEnv(gym.Env, ABC):
     """The GoalEnv class that was migrated from gym (v0.22) to gym-robotics."""
+
+    __metaclass__ = GymEnvMetaClass
 
     def reset(
         self, seed: Optional[int] = None, return_info: bool = False, options=None
@@ -209,7 +215,9 @@ def default_reward_fun(action, new_obs):
     return np.expand_dims(reward, axis=-1)
 
 
-class GMazeDubins(GMazeCommon, gym.Env):
+class GMazeDubins(GMazeCommon, gym.Env, ABC):
+    __metaclass__ = GymEnvMetaClass
+
     def __init__(self, num_envs: int = 1):
         super().__init__(num_envs)
 
@@ -289,7 +297,9 @@ def default_success_function(achieved_goal: np.ndarray, desired_goal: np.ndarray
     return 1.0 * (d < distance_threshold)
 
 
-class GMazeGoalDubins(GMazeCommon, GoalEnv):
+class GMazeGoalDubins(GMazeCommon, GoalEnv, ABC):
+    __metaclass__ = GymEnvMetaClass
+
     def __init__(self, num_envs: int = 1):
         super().__init__(num_envs)
 
