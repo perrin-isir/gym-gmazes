@@ -1,9 +1,6 @@
 # Copyright 2022 Nicolas Perrin-Gilbert.
 #
 # Licensed under the BSD 3-Clause License.
-import abc
-from abc import ABC
-from abc import abstractmethod
 from typing import Optional
 import gym
 from typing import Union
@@ -13,14 +10,8 @@ import numpy as np
 from matplotlib import collections as mc
 
 
-class GymEnvMetaClass(type(gym.Env), abc.ABCMeta):
-    pass
-
-
-class GoalEnv(gym.Env, ABC):
+class GoalEnv(gym.Env):
     """The GoalEnv class that was migrated from gym (v0.22) to gym-robotics."""
-
-    __metaclass__ = GymEnvMetaClass
 
     def reset(
         self, seed: Optional[int] = None, return_info: bool = False, options=None
@@ -35,7 +26,6 @@ class GoalEnv(gym.Env, ABC):
             if key not in self.observation_space.spaces:
                 raise error.Error('GoalEnv requires the "{}" key.'.format(key))
 
-    @abstractmethod
     def compute_reward(self, achieved_goal, desired_goal, info):
         """Compute the step reward.
         Args:
@@ -75,7 +65,7 @@ def intersect(a, b, c, d):
     return np.logical_and(criterion1, criterion2)
 
 
-class GMazeCommon(ABC):
+class GMazeCommon:
     def __init__(self, num_envs: int):
         self.num_envs = num_envs
         self.compute_reward = None
@@ -111,7 +101,6 @@ class GMazeCommon(ABC):
         else:
             self.reset_steps = np.array(reset_steps, dtype=int)
 
-    @abstractmethod
     def reset_done(self, done, *, options=None, seed: Optional[int] = None, infos=None):
         pass
 
@@ -215,9 +204,7 @@ def default_reward_fun(action, new_obs):
     return np.expand_dims(reward, axis=-1)
 
 
-class GMazeDubins(GMazeCommon, gym.Env, ABC):
-    __metaclass__ = GymEnvMetaClass
-
+class GMazeDubins(GMazeCommon, gym.Env):
     def __init__(self, num_envs: int = 1):
         super().__init__(num_envs)
 
@@ -297,9 +284,7 @@ def default_success_function(achieved_goal: np.ndarray, desired_goal: np.ndarray
     return 1.0 * (d < distance_threshold)
 
 
-class GMazeGoalDubins(GMazeCommon, GoalEnv, ABC):
-    __metaclass__ = GymEnvMetaClass
-
+class GMazeGoalDubins(GMazeCommon, GoalEnv):
     def __init__(self, num_envs: int = 1):
         super().__init__(num_envs)
 
