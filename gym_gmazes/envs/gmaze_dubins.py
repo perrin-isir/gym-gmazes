@@ -11,7 +11,9 @@ from matplotlib import collections as mc
 
 
 class GoalEnv(gym.Env):
-    """The GoalEnv class that was migrated from gym (v0.22) to gym-robotics."""
+    """A slightly modified version of the GoalEnv class that was migrated from
+    gym (v0.22) to gym-robotics.
+    """
 
     def reset(
         self, seed: Optional[int] = None, return_info: bool = False, options=None
@@ -26,18 +28,14 @@ class GoalEnv(gym.Env):
             if key not in self.observation_space.spaces:
                 raise error.Error('GoalEnv requires the "{}" key.'.format(key))
 
-    def compute_reward(self, achieved_goal, desired_goal, info):
+    def compute_reward(self, achieved_goal, desired_goal, *args):
         """Compute the step reward.
         Args:
             achieved_goal (object): the goal that was achieved during execution
             desired_goal (object): the desired goal
-            info (dict): an info dictionary with additional information
+            *args: optional additional arguments
         Returns:
-            float: The reward that corresponds to the provided achieved goal w.r.t. to
-            the desired goal. Note that the following should always hold true:
-                ob, reward, done, info = env.step()
-                assert reward == env.compute_reward(ob['achieved_goal'],
-                                                    ob['desired_goal'], info)
+            float: the reward that corresponds to the provided arguments
         """
         raise NotImplementedError
 
@@ -263,11 +261,7 @@ def goal_distance(goal_a, goal_b):
     return np.linalg.norm(goal_a[:, :2] - goal_b[:, :2], axis=-1)
 
 
-def default_compute_reward(
-    achieved_goal: np.ndarray,
-    desired_goal: np.ndarray,
-    info: dict,
-):
+def default_compute_reward(achieved_goal: np.ndarray, desired_goal: np.ndarray, *args):
     distance_threshold = 0.1
     # reward_type = "sparse"
     reward_type = "dense"
@@ -370,7 +364,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv):
     def step(self, action: np.ndarray):
         _, truncation = self.common_step(action)
 
-        reward = self.compute_reward(achieved_g(self.state), self.goal, {}).reshape(
+        reward = self.compute_reward(achieved_g(self.state), self.goal).reshape(
             (self.num_envs, 1)
         )
         is_success = self._is_success(achieved_g(self.state), self.goal).reshape(
