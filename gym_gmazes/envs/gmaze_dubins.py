@@ -3,7 +3,7 @@
 # Licensed under the BSD 3-Clause License.
 from typing import Optional
 import gym
-from typing import Union
+from typing import Union, List
 from gym import spaces
 from gym import error
 import numpy as np
@@ -15,9 +15,7 @@ class GoalEnv(gym.Env):
     gym (v0.22) to gym-robotics.
     """
 
-    def reset(
-        self, seed: Optional[int] = None, return_info: bool = False, options=None
-    ):
+    def reset(self, seed: Optional[int] = None, options=None):
         super().reset(seed=seed)
         # Enforce that each GoalEnv uses a Goal-compatible observation space.
         if not isinstance(self.observation_space, gym.spaces.Dict):
@@ -73,7 +71,7 @@ class GMazeCommon:
         self.reset_states = None
         self.reset_steps = None
         self.steps = None
-        self.done = np.zeros((num_envs, 1), dtype="int")
+        self.done = np.zeros((num_envs, 1), dtype=bool)
         self.init_qvel = None  # velocities are not used
         self.state = self.init_qpos
         self.walls = []
@@ -158,10 +156,10 @@ class GMazeCommon:
                 intersection
             )
         self.steps += 1
-        truncation = np.asarray(
-            (self.steps == self.max_episode_steps), dtype=float
+        truncated = np.asarray(
+            (self.steps == self.max_episode_steps), dtype=bool
         ).reshape((self.num_envs, 1))
-        return action, truncation
+        return action, truncated
 
     def set_reward_function(self, reward_function):
         self.compute_reward = (
@@ -216,41 +214,39 @@ class GMazeDubins(GMazeCommon, gym.Env):
         )
 
     def step(self, action: np.ndarray):
-        action, truncation = self.common_step(action)
+        action, truncated = self.common_step(action)
 
         observation = self.state
         reward = self.compute_reward(action, observation).reshape((self.num_envs, 1))
-        self.done = truncation
-        info = {"truncation": truncation}
+        terminated = np.zeros((self.num_envs, 1), dtype=bool)
+        self.done = truncated
+        info = {}
         return (
             observation,
             reward,
-            self.done,
+            terminated,
+            truncated,
             info,
         )
 
     def reset(
-        self, seed: Optional[int] = None, return_info: bool = False, options=None
+        self,
+        *,
+        seed: Optional[Union[int, List[int]]] = None,
+        options: Optional[dict] = None
     ):
         info = self.common_reset()
-        if return_info:
-            return self.state, info
-        else:
-            return self.state
+        return self.state, info
 
     def reset_done(
         self,
         done,
         *,
-        seed: Optional[int] = None,
-        return_info: bool = False,
-        options=None
+        seed: Optional[Union[int, List[int]]] = None,
+        options: Optional[dict] = None
     ):
         info = self.common_reset_done(done)
-        if return_info:
-            return self.state, info
-        else:
-            return self.state
+        return self.state, info
 
 
 def achieved_g(state):
@@ -275,7 +271,7 @@ def default_compute_reward(achieved_goal: np.ndarray, desired_goal: np.ndarray, 
 def default_success_function(achieved_goal: np.ndarray, desired_goal: np.ndarray):
     distance_threshold = 0.1
     d = goal_distance(achieved_goal, desired_goal)
-    return 1.0 * (d < distance_threshold)
+    return d < distance_threshold
 
 
 class GMazeGoalDubins(GMazeCommon, GoalEnv):
@@ -323,9 +319,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv):
             goal = np.asarray(goal)
         self.goal = goal
 
-    def reset(
-        self, seed: Optional[int] = None, return_info: bool = False, options=None
-    ):
+    def reset(self, seed: Optional[int] = None, options=None):
         info = self.common_reset()
         self.set_goal(self._sample_goal())  # sample goal
         res = {
@@ -333,18 +327,14 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv):
             "achieved_goal": achieved_g(self.state),
             "desired_goal": self.goal,
         }
-        if return_info:
-            return res, info
-        else:
-            return res
+        return res, info
 
     def reset_done(
         self,
         done,
         *,
-        seed: Optional[int] = None,
-        return_info: bool = False,
-        options=None
+        seed: Optional[Union[int, List[int]]] = None,
+        options: Optional[dict] = None
     ):
         if not isinstance(done, np.ndarray):
             done = np.asarray(done)
@@ -356,26 +346,21 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv):
             "achieved_goal": achieved_g(self.state),
             "desired_goal": self.goal,
         }
-        if return_info:
-            return res, info
-        else:
-            return res
+        return res, info
 
     def step(self, action: np.ndarray):
-        _, truncation = self.common_step(action)
+        _, truncated = self.common_step(action)
 
         reward = self.compute_reward(achieved_g(self.state), self.goal).reshape(
             (self.num_envs, 1)
         )
-        is_success = self._is_success(achieved_g(self.state), self.goal).reshape(
+        terminated = self._is_success(achieved_g(self.state), self.goal).reshape(
             (self.num_envs, 1)
         )
-        truncation = truncation * (1 - is_success)
         info = {
-            "is_success": is_success,
-            "truncation": truncation,
+            "is_success": terminated,
         }
-        self.done = np.maximum(truncation, is_success)
+        self.done = np.logical_or(terminated, truncated)
 
         return (
             {
@@ -384,6 +369,7 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv):
                 "desired_goal": self.goal,
             },
             reward,
-            self.done,
+            terminated,
+            truncated,
             info,
         )
