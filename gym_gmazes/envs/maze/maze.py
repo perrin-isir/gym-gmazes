@@ -1,4 +1,3 @@
-import random
 import numpy as np
 from gym_gmazes.envs.maze.cell import Cell
 
@@ -23,8 +22,7 @@ class Maze(object):
                 num_cols (int): The height of the maze in cells
 
         """
-        print("MAZE setting random seed ", seed)
-        random.seed(seed)
+        self.rng = np.random.default_rng(seed)
         self.num_cols = num_cols
         self.num_rows = num_rows
         self.grid_size = num_rows * num_cols
@@ -78,7 +76,7 @@ class Maze(object):
                     self.grid[i][3].add_walls(i, 4)
                     self.grid[i][4].add_walls(i, 3)
         else:
-            print("ERROR : No standard maze for size ", self.num_cols)
+            raise ValueError(f"No standard maze for size {self.num_cols}")
 
     def empty_grid(self):
         for i in range(self.num_rows):
@@ -194,25 +192,25 @@ class Maze(object):
 
         # Try until unused location along boundary is found.
         while rng_entry_exit == used_entry_exit:
-            rng_side = random.randint(0, 3)
+            rng_side = self.rng.integers(0, 3)
 
             if rng_side == 0:  # Top side
-                tmp_entry = (0, random.randint(0, self.num_cols - 1))
+                tmp_entry = (0, self.rng.integers(0, self.num_cols - 1))
                 if count_walls(tmp_entry) == 3:
                     rng_entry_exit = tmp_entry
 
             elif rng_side == 2:  # Right side
-                tmp_entry = (self.num_rows - 1, random.randint(0, self.num_cols - 1))
+                tmp_entry = (self.num_rows - 1, self.rng.integers(0, self.num_cols - 1))
                 if count_walls(tmp_entry) == 3:
                     rng_entry_exit = tmp_entry
 
             elif rng_side == 1:  # Bottom side
-                tmp_entry = (random.randint(0, self.num_rows - 1), self.num_cols - 1)
+                tmp_entry = (self.rng.integers(0, self.num_rows - 1), self.num_cols - 1)
                 if count_walls(tmp_entry) == 3:
                     rng_entry_exit = tmp_entry
 
             elif rng_side == 3:  # Left side
-                tmp_entry = (random.randint(0, self.num_rows - 1), 0)
+                tmp_entry = (self.rng.integers(0, self.num_rows - 1), 0)
                 if count_walls(tmp_entry) == 3:
                     rng_entry_exit = tmp_entry
 
@@ -238,7 +236,7 @@ class Maze(object):
 
             if neighbour_indices is not None:  # If there are unvisited neighbour cells
                 visited_cells.append((k_curr, l_curr))  # Add current cell to stack
-                k_next, l_next = random.choice(neighbour_indices)  # Choose neighbour
+                k_next, l_next = self.rng.choice(neighbour_indices)  # Choose neighbour
                 self.grid[k_curr][l_curr].remove_walls(k_next, l_next)
                 self.grid[k_next][l_next].remove_walls(k_curr, l_curr)
                 self.grid[k_next][l_next].visited = True  # Move to that neighbour

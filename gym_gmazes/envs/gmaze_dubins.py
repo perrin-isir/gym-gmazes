@@ -15,7 +15,7 @@ class GoalEnv(gym.Env):
     gym (v0.22) to gym-robotics.
     """
 
-    def reset(self, seed: Optional[int] = None, options=None):
+    def reset(self, *, seed: Optional[int] = None, options=None):
         super().reset(seed=seed)
         # Enforce that each GoalEnv uses a Goal-compatible observation space.
         if not isinstance(self.observation_space, gym.spaces.Dict):
@@ -319,7 +319,12 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv):
             goal = np.asarray(goal)
         self.goal = goal
 
-    def reset(self, seed: Optional[int] = None, options=None):
+    def reset(
+        self,
+        *,
+        seed: Optional[Union[int, List[int]]] = None,
+        options: Optional[dict] = None
+    ):
         info = self.common_reset()
         self.set_goal(self._sample_goal())  # sample goal
         res = {
