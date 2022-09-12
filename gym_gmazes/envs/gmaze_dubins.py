@@ -315,9 +315,9 @@ class GMazeGoalDubins(GMazeCommon, GoalEnv):
         return achieved_g(np.random.rand(self.num_envs, 2) * 2.0 - 1)
 
     def set_goal(self, goal):
-        if not isinstance(goal, np.ndarray):
-            goal = np.asarray(goal)
-        self.goal = goal
+        self.goal = (
+            np.copy(goal) if isinstance(goal, np.ndarray) else np.copy(np.asarray(goal))
+        )
 
     def reset(
         self,
