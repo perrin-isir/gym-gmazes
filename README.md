@@ -41,3 +41,8 @@ Finally, to install the *gym-gmazes* library in the activated virtual environmen
 
 </p>
 </details>
+
+Once the installation is complete, you can import the environment with:  
+```import gym_gmazes```
+
+This directly registers the environments *GMazeDubins-v0* and *GMazeGoalDubins-v0* in gym.
