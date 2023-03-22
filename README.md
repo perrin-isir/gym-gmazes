@@ -1,6 +1,5 @@
 # gym-gmazes
-Maze environments with Dubins' car dynamics for reinforcement learning
-(with OpenAI Gym interface).
+Maze environments with Dubins' car dynamics for reinforcement learning, with Gym(nasium) interface.
 
 See this [*xpag*](https://github.com/perrin-isir/xpag) tutorial for an example of policy 
 training in a gym-gmazes goal-based environment (GMazeGoalDubins-v0):  

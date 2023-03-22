@@ -6,11 +6,11 @@ setup(
     name="gym_gmazes",
     version="0.1.0",
     author="Nicolas Perrin-Gilbert",
-    description="Mazes environments for RL (with OpenAI Gym interface)",
+    description="Maze environments with Gym(nasium) interface",
     url="https://github.com/perrin-isir/gym-gmazes",
     packages=find_packages(),
     install_requires=[
-        "gym>=0.26.0",
+        "gymnasium>=0.26.0",
         "matplotlib>=3.1.3",
     ],
     license="LICENSE",

@@ -2,10 +2,10 @@
 #
 # Licensed under the BSD 3-Clause License.
 from typing import Optional
-import gym
+import gymnasium as gym
 from typing import Union, List
-from gym import spaces
-from gym import error
+from gymnasium import spaces
+from gymnasium import error
 import numpy as np
 from matplotlib import collections as mc
 

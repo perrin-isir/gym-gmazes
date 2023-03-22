@@ -1,6 +1,6 @@
 import os
-import gym
-from gym.envs.registration import register
+import gymnasium as gym
+from gymnasium.envs.registration import register
 from gym_gmazes.envs.maze.maze import get_maze
 
 __version__ = "0.1.0"
